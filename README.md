@@ -19,9 +19,9 @@ Error: Cannot find module './native/_index_.node'
 Fix: 
 Need rename a file into `@iota/pow-neon.js/dist/native/index.node` into `@iota/pow-neon.js/dist/native/_index_.node`
 
-## While runninig programm
+### 2. While runninig programm
 
-
+Logs:
 ```
 npm start                                                                                     z4h recovery mode
 
