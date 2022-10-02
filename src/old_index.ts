@@ -738,7 +738,7 @@ function createNftCollectionOutputs(issuerAddress: lib.INftAddress, targetAddres
             "standard" : "IRC27",
             "type": "image",
             "version": "v1.0",
-            "tokenURI": "https://mywebsite.com/myfile" + i + ".png",
+            "tokenURI": "https://robohash.org/shimmer-" + i + ".png",
             "tokenName": "My NFT #" + i,
             "collectionId": issuerAddress.nftId,
             "collectionName": "My Collection of Art",
@@ -894,7 +894,7 @@ async function caluclateNonce(block: lib.IBlock, minPowScore: number): Promise<s
         );
     }
 
-    const powProvider = new NeonPowProvider();
+    const powProvider = new NeonPowProvider(4);
     const nonce = await powProvider.pow(blockBytes, minPowScore);
     return nonce.toString();
 }
