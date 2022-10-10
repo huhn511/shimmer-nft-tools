@@ -9,9 +9,12 @@ import bigInt from "big-integer";
 
  // export function mintCollectionNft(consumedOutput: lib.OutputTypes, consumedOutputId: string, walletAddressHex: string, walletKeyPair: lib.IKeyPair, targetAddress: lib.AddressTypes, networkId: any): lib.ITransactionPayload{
  export function mintCollectionNft(consumedOutput: lib.OutputTypes, consumedOutputId: string, walletAddressHex: string, walletKeyPair: lib.IKeyPair, targetAddress: lib.AddressTypes, networkId: any): any{
+    
+    console.log("0")
     // Prepare inputs to the tx
     const input = lib.TransactionHelper.inputFromOutputId(consumedOutputId);
-
+    console.log("1")
+    
     // Create the outputs, that is an NFT output
     let nftOutput: lib.INftOutput = {
         type: lib.NFT_OUTPUT_TYPE,
@@ -39,7 +42,8 @@ import bigInt from "big-integer";
             }
         ]
     }
-
+    console.log("2")
+    
     // create basic output for the reminder amount
     const remainderOutput: lib.IBasicOutput = {
         type: lib.BASIC_OUTPUT_TYPE,
@@ -54,11 +58,13 @@ import bigInt from "big-integer";
         ],
         features: [],
     }
-
+    
+    console.log("3")
     // Prepare Tx essence
     // InputsCommitment calculation
     const inputsCommitment = lib.TransactionHelper.getInputsCommitment([consumedOutput]);
-
+    console.log("4")
+    
     // Creating Transaction Essence
     const txEssence: lib.ITransactionEssence = {
         type: lib.TRANSACTION_ESSENCE_TYPE,
@@ -67,10 +73,11 @@ import bigInt from "big-integer";
         outputs: [nftOutput, remainderOutput],
         inputsCommitment: inputsCommitment,
     };
-
+    console.log("5")
     // Calculating Transaction Essence Hash (to be signed in signature unlocks)
     const essenceHash = lib.TransactionHelper.getTransactionEssenceHash(txEssence)
-
+    console.log("6")
+    
     // We unlock only one output, so there will be one unlock with signature
     let unlock: lib.ISignatureUnlock = {
         type: lib.SIGNATURE_UNLOCK_TYPE,
@@ -80,17 +87,21 @@ import bigInt from "big-integer";
             signature: Converter.bytesToHex(Ed25519.sign(walletKeyPair.privateKey, essenceHash), true)
         }
     };
-
+    console.log("7")
+    
     // Constructing Transaction Payload
     const txPayload: lib.ITransactionPayload = {
         type: lib.TRANSACTION_PAYLOAD_TYPE,
         essence: txEssence,
         unlocks: [unlock]
     };
-
+    
+    console.log("8")
     // Record some info for ourselves
     let nftOutputId = Converter.bytesToHex(lib.TransactionHelper.getTransactionPayloadHash(txPayload), true) + "0000";
+    console.log("9")
     let basicOutputId = Converter.bytesToHex(lib.TransactionHelper.getTransactionPayloadHash(txPayload), true) + "0100";
+    console.log("10")
 
     // ctx.outputIdByName?.set("tx1CollectionNft", nftOutputId);
     // ctx.outputByName?.set("tx1CollectionNft", nftOutput);

@@ -7,6 +7,8 @@ import bigInt from "big-integer";
 import * as console from "console";
 import fetch from "node-fetch";
 
+import config from "./config"
+
 import { mintCollectionNft, createNftCollectionOutputs, mintCollectionNfts } from "./create_nft";
 
 const EXPLORER = "https://explorer.shimmer.network/testnet";
@@ -54,11 +56,8 @@ async function run() {
     nodeInfo.protocol.networkName
   );
 
-  // To use your address put here you mnemonic
-  const mnemonic =
-    "assist file add kidney sense anxiety march quality sphere stamp crime swift mystery bind thrive impact walk solar asset pottery nation dutch column beef";
   // Generate the seed from the Mnemonic
-  const walletSeed = Ed25519Seed.fromMnemonic(mnemonic);
+  const walletSeed = Ed25519Seed.fromMnemonic(config.mnemonic);
   // Generate the seed for the wallet
   //const walletSeed = new Ed25519Seed(randomBytes(32));
 
@@ -110,6 +109,7 @@ async function run() {
    ************************************/
 
   console.log("Minting collection nft...");
+  console.log("hä?");
   let collectionNft = mintCollectionNft(
     genesisOutput,
     outputId,
@@ -118,6 +118,7 @@ async function run() {
     walletAddress,
     networkId
   );
+  console.log("collectionNft", collectionNft);
   let txList = [];
   txList.push(collectionNft.txPayload);
   console.log("txList", txList);
