@@ -13,12 +13,15 @@ import bigInt from "big-integer";
     console.log("0")
     // Prepare inputs to the tx
     const input = lib.TransactionHelper.inputFromOutputId(consumedOutputId);
-    console.log("1")
+    console.log("1, input: ", input)
+    console.log("1, consumedOutput.amount: ", consumedOutput.amount)
+    console.log("1, value: ", parseInt(consumedOutput.amount) / 2)
+    console.log("1, value: new ", Math.ceil(parseInt(consumedOutput.amount) / 2))
     
     // Create the outputs, that is an NFT output
     let nftOutput: lib.INftOutput = {
         type: lib.NFT_OUTPUT_TYPE,
-        amount: (parseInt(consumedOutput.amount) / 2).toString(),  // We could put only requiredStorageDepoist into the nft output, but we will mint nft collection so we are going to transfer half of the basic output amount.
+        amount: (Math.ceil(parseInt(consumedOutput.amount) / 2)).toString(),  // We could put only requiredStorageDepoist into the nft output, but we will mint nft collection so we are going to transfer half of the basic output amount.
         // when minting, this has to be set to zero. It will be set in nodes as the hash of the outputId when the tx confirms.
         // Note, that from the first spend of the NFT you have to use the actual hash of outputId
         nftId: "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -42,12 +45,12 @@ import bigInt from "big-integer";
             }
         ]
     }
-    console.log("2")
+    console.log("2, nftOutput: ", nftOutput)
     
     // create basic output for the reminder amount
     const remainderOutput: lib.IBasicOutput = {
         type: lib.BASIC_OUTPUT_TYPE,
-        amount: (parseInt(consumedOutput.amount) / 2).toString(), // we return the other half as a reminder
+        amount: (Math.ceil(parseInt(consumedOutput.amount) / 2)).toString(), // we return the other half as a reminder
         nativeTokens: [],
         unlockConditions: [
             // Send it to the target address
@@ -59,7 +62,7 @@ import bigInt from "big-integer";
         features: [],
     }
     
-    console.log("3")
+    console.log("3, remainderOutput: ", remainderOutput)
     // Prepare Tx essence
     // InputsCommitment calculation
     const inputsCommitment = lib.TransactionHelper.getInputsCommitment([consumedOutput]);
@@ -73,7 +76,7 @@ import bigInt from "big-integer";
         outputs: [nftOutput, remainderOutput],
         inputsCommitment: inputsCommitment,
     };
-    console.log("5")
+    console.log("5, txEssence: ", txEssence)
     // Calculating Transaction Essence Hash (to be signed in signature unlocks)
     const essenceHash = lib.TransactionHelper.getTransactionEssenceHash(txEssence)
     console.log("6")
