@@ -142,7 +142,7 @@ async function run() {
     collectionNftAddress,
     walletAddress,
     newAddressBech32,
-    5,
+    50,
     nodeInfo
   );
 
