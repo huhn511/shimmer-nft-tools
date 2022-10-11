@@ -7,9 +7,13 @@ import bigInt from "big-integer";
 import * as console from "console";
 import fetch from "node-fetch";
 
-import config from "./config"
+import config from "./config";
 
-import { mintCollectionNft, createNftCollectionOutputs, mintCollectionNfts } from "./create_nft";
+import {
+  mintCollectionNft,
+  createNftCollectionOutputs,
+  mintCollectionNfts,
+} from "./create_nft";
 
 const EXPLORER = "https://explorer.shimmer.network/testnet";
 const FAUCET = "https://faucet.testnet.shimmer.network/api/enqueue";
@@ -146,30 +150,35 @@ async function run() {
       "Not enough funds to mint collection. Request funds from faucet:" + FAUCET
     );
   }
+
+  // Split NFTs to send in chained txs
+  const chunkSize = 10;
+  const chunkArray = [];
+  for (let i = 0; i < config.collectionSize; i += chunkSize) {
+    const chunk = nftCollectionOutputs.outputs.slice(i, i + chunkSize);
+    chunkArray.push(chunk);
+  }
   console.log("Minting nft collection...");
   let tempOutput = collectionNft.tx1CollectionNftOutput;
   let tempOutputId = collectionNft.tx1CollectionNftOutputId;
-  for (let index = 0; index < config.collectionSize; index++) {
 
-    // let fixedAmount = nftCollectionOutputs.totalDeposit//nftCollectionOutputs.totalDeposit / config.collectionSize;
-    // let firstTx = bigInt(tempOutput.amount).minus(nftCollectionOutputs.totalDeposit).toJSNumber()
-    console.log("tempOutput.amount", tempOutput.amount)
-    const [ txPayload, prevCollectionNftOutputId, prevCollectionNft ] = mintCollectionNfts(
-      config.collectionSize,
-      index == 0 ? true : false,
-      tempOutput,//collectionNft.tx1CollectionNftOutput,
-      tempOutputId,
-      [nftCollectionOutputs.outputs[index]], // Single NFT for testing
-      // nftCollectionOutputs.outputs.slice(index, 5),
-      tempOutput.amount,
-      walletKeyPair,
-      networkId
+  for (let index = 0; index < chunkArray.length; index++) {
+
+    const [txPayload, prevCollectionNftOutputId, prevCollectionNft] =
+      mintCollectionNfts(
+        config.collectionSize,
+        index == 0 ? true : false,
+        tempOutput,
+        tempOutputId,
+        chunkArray[index], 
+        tempOutput.amount,
+        walletKeyPair,
+        networkId
       );
-      txList.push(txPayload);
-      tempOutput = prevCollectionNft;
-      tempOutputId = prevCollectionNftOutputId;
-    }
-
+    txList.push(txPayload);
+    tempOutput = prevCollectionNft;
+    tempOutputId = prevCollectionNftOutputId;
+  }
 
   /****************************************************************************************
    * Current output ownership:
@@ -177,13 +186,17 @@ async function run() {
    *  - Receiver Hot Wallet: []
    ****************************************************************************************/
 
-   console.log("Chaining together transactions via blocks...");
-   // Finally, time to prepare the three blocks, and chain them together via `parents`
-   let blocks: lib.IBlock[] = await chainTrasactionsViaBlocks(client, txList, nodeInfo.protocol.minPowScore);
+  console.log("Chaining together transactions via blocks...");
+  // Finally, time to prepare the three blocks, and chain them together via `parents`
+  let blocks: lib.IBlock[] = await chainTrasactionsViaBlocks(
+    client,
+    txList,
+    nodeInfo.protocol.minPowScore
+  );
 
-   // send the blocks to the network
-   // We calculated pow by hand, so we don't define a localPow provider for the client so it doesn't redo the pow again.
-   await submit(blocks, client);
+  // send the blocks to the network
+  // We calculated pow by hand, so we don't define a localPow provider for the client so it doesn't redo the pow again.
+  await submit(blocks, client);
 }
 
 // Use the indexer API to fetch the output sent to the wallet address by the faucet
@@ -225,87 +238,94 @@ async function fetchAndWaitForBasicOutput(
   return outputsResponse.items[0];
 }
 
-
 // The first block will have parents fetched from the tangle. The subsequent blocks refernce always the previous block as parent.
-async function chainTrasactionsViaBlocks(client: lib.SingleNodeClient, txs: Array<lib.ITransactionPayload>, minPowScore: number): Promise<Array<lib.IBlock>> {
-    if (txs.length === 0) {
-        throw new Error("can't create blocks from empty transaction payload list");
+async function chainTrasactionsViaBlocks(
+  client: lib.SingleNodeClient,
+  txs: Array<lib.ITransactionPayload>,
+  minPowScore: number
+): Promise<Array<lib.IBlock>> {
+  if (txs.length === 0) {
+    throw new Error("can't create blocks from empty transaction payload list");
+  }
+
+  // we will chain the blocks together via their blockIds as parents
+  let blockIds: Array<string> = [];
+  let blocks: Array<lib.IBlock> = [];
+
+  // parents for the first block
+  let parents = (await client.tips()).tips;
+
+  for (let i = 0; i < txs.length; i++) {
+    let block: lib.IBlock = {
+      protocolVersion: lib.DEFAULT_PROTOCOL_VERSION,
+      parents: [],
+      payload: txs[i],
+      nonce: "0", // will be filled when calculating pow
+    };
+
+    if (i === 0) {
+      // the first block  will have the fetched parents
+      block.parents = parents;
+    } else {
+      // subsequent blocks reference the previous block
+      block.parents = [blockIds[i - 1]];
     }
 
-    // we will chain the blocks together via their blockIds as parents
-    let blockIds: Array<string> = [];
-    let blocks: Array<lib.IBlock> = [];
+    // Calculate Pow
+    console.log(`Calculating PoW for block ${i + 1}...`);
+    const blockNonce = await caluclateNonce(block, minPowScore);
 
-    // parents for the first block
-    let parents = (await client.tips()).tips;
+    // Update nonce field of the block
+    block.nonce = blockNonce;
 
-    for (let i = 0; i < txs.length; i++) {
-        let block: lib.IBlock = {
-            protocolVersion: lib.DEFAULT_PROTOCOL_VERSION,
-            parents: [],
-            payload: txs[i],
-            nonce: "0" // will be filled when calculating pow
-        };
+    // Calculate blockId
+    const blockId = lib.TransactionHelper.calculateBlockId(block);
 
-        if (i === 0) {
-            // the first block  will have the fetched parents
-            block.parents = parents;
-        } else {
-            // subsequent blocks reference the previous block
-            block.parents = [blockIds[i - 1]];
-        }
+    // Add it to list of blockIds
+    blockIds.push(blockId);
 
-        // Calculate Pow
-        console.log(`Calculating PoW for block ${i+1}...`)
-        const blockNonce = await caluclateNonce(block, minPowScore);
+    // Add it to list of block
+    blocks.push(block);
+  }
 
-        // Update nonce field of the block
-        block.nonce = blockNonce;
-
-        // Calculate blockId
-        const blockId = lib.TransactionHelper.calculateBlockId(block);
-
-        // Add it to list of blockIds
-        blockIds.push(blockId);
-
-        // Add it to list of block
-        blocks.push(block);
-    }
-
-    return blocks;
+  return blocks;
 }
-
 
 // Send an array of block in order to the node.
 async function submit(blocks: Array<lib.IBlock>, client: lib.SingleNodeClient) {
-    for (let i = 0; i < blocks.length; i++) {
-        console.log(`Submitting block ${i+1}...`);
-        const blockId = await client.blockSubmit(blocks[i]);
-        console.log(`Submitted block ${i+1} blockId is ${blockId}, check out the transaction at ${EXPLORER}/block/${blockId}`);
-    }
+  for (let i = 0; i < blocks.length; i++) {
+    console.log(`Submitting block ${i + 1}...`);
+    const blockId = await client.blockSubmit(blocks[i]);
+    console.log(
+      `Submitted block ${
+        i + 1
+      } blockId is ${blockId}, check out the transaction at ${EXPLORER}/block/${blockId}`
+    );
+  }
 }
-
 
 /***********************************************************************************************************************
  * UTILS
  ***********************************************************************************************************************/
 // Performs PoW on a block to calculate nonce. Uses NeonPowProvider.
-async function caluclateNonce(block: lib.IBlock, minPowScore: number): Promise<string> {
-    const writeStream = new WriteStream();
-    lib.serializeBlock(writeStream, block);
-    const blockBytes = writeStream.finalBytes();
+async function caluclateNonce(
+  block: lib.IBlock,
+  minPowScore: number
+): Promise<string> {
+  const writeStream = new WriteStream();
+  lib.serializeBlock(writeStream, block);
+  const blockBytes = writeStream.finalBytes();
 
-    if (blockBytes.length > lib.MAX_BLOCK_LENGTH) {
-        throw new Error(
-            `The block length is ${blockBytes.length}, which exceeds the maximum size of ${lib.MAX_BLOCK_LENGTH}`
-        );
-    }
+  if (blockBytes.length > lib.MAX_BLOCK_LENGTH) {
+    throw new Error(
+      `The block length is ${blockBytes.length}, which exceeds the maximum size of ${lib.MAX_BLOCK_LENGTH}`
+    );
+  }
 
-    const powProvider = new NeonPowProvider();
-    const nonce = await powProvider.pow(blockBytes, minPowScore);
-    return nonce.toString();
+  const powProvider = new NeonPowProvider();
+  const nonce = await powProvider.pow(blockBytes, minPowScore);
+  return nonce.toString();
 }
-
 
 run()
   .then(() => console.log("Done"))

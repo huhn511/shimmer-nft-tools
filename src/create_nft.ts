@@ -196,8 +196,6 @@ export function mintCollectionNfts(collectionSize: number, resolveCollectionNftI
     })
      
     prevCollectionNft.amount = bigInt(consumedOutput.amount).minus(sum).toString(); 
-    console.log("consumedOutput.amount", consumedOutput.amount)
-    console.log("prevCollectionNft.amount", prevCollectionNft.amount)
     // 5.Create transaction essence
     const collectionTransactionEssence: lib.ITransactionEssence = {
         type: lib.TRANSACTION_ESSENCE_TYPE,
