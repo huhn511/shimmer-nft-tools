@@ -42,7 +42,7 @@ import {
 
 async function run() {
   // Neon localPoW is blazingly fast, but you need rust toolchain to build
-  const client = new SingleNodeClient(API_ENDPOINT, {
+  const client = new SingleNodeClient(config.rpcEndpoint, {
     powProvider: new NeonPowProvider(),
   });
   const indexerPluginClient = new IndexerPluginClient(client);
@@ -142,7 +142,7 @@ async function run() {
     collectionNftAddress,
     walletAddress,
     newAddressBech32,
-    50,
+    config.collectionSize,
     nodeInfo
   );
 
@@ -155,17 +155,20 @@ async function run() {
     );
   }
   console.log("Minting nft collection...");
-  let txPayload2 = mintCollectionNfts(
-    "tx2",
-    true,
-    collectionNft.tx1CollectionNftOutput,
-    collectionNft.tx1CollectionNftOutputId,
-    nftCollectionOutputs.outputs,
-    nftCollectionOutputs.totalDeposit,
-    walletKeyPair,
-    networkId
-  );
-  txList.push(txPayload2);
+  for (let index = 0; index < config.collectionSize; index++) {
+    
+    let txPayload2 = mintCollectionNfts(
+      config.collectionSize,
+      true,
+      collectionNft.tx1CollectionNftOutput,
+      collectionNft.tx1CollectionNftOutputId,
+      [nftCollectionOutputs.outputs[index]],
+      nftCollectionOutputs.totalDeposit / config.collectionSize,
+      walletKeyPair,
+      networkId
+      );
+      txList.push(txPayload2);
+    }
 
   console.log("txList", txList)
 
@@ -263,6 +266,9 @@ async function chainTrasactionsViaBlocks(client: lib.SingleNodeClient, txs: Arra
         // Calculate blockId
         const blockId = lib.TransactionHelper.calculateBlockId(block);
 
+        console.log("chainTrasactionsViaBlocks:blockId: ", blockId)
+        console.log("chainTrasactionsViaBlocks:block: ", block)
+
         // Add it to list of blockIds
         blockIds.push(blockId);
 
@@ -299,7 +305,7 @@ async function caluclateNonce(block: lib.IBlock, minPowScore: number): Promise<s
         );
     }
 
-    const powProvider = new NeonPowProvider(4);
+    const powProvider = new NeonPowProvider();
     const nonce = await powProvider.pow(blockBytes, minPowScore);
     return nonce.toString();
 }

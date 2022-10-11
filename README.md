@@ -1,12 +1,15 @@
-
 # Shimmer NFT Tools
 
 To start developing, please run the following commands:
 ```
 npm install
+cp src/config.example.ts src/config.ts 
 npm run dist
 npm start
 ```
+
+[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/huhn511/shimmer-nft-tools)
+
 
 ## Errors
 

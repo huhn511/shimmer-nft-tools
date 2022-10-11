@@ -189,7 +189,7 @@ export function createNftCollectionOutputs(issuerAddress: lib.INftAddress, targe
 
 
 
-export function mintCollectionNfts(txName: string, resolveCollectionNftId: boolean, consumedOutput: lib.OutputTypes, consumedOutputId: string, collectionOutputs: lib.OutputTypes[], totalDeposit: number, signerKeyPair: lib.IKeyPair, networkId: any): lib.ITransactionPayload{
+export function mintCollectionNfts(collectionSize: number, resolveCollectionNftId: boolean, consumedOutput: lib.OutputTypes, consumedOutputId: string, collectionOutputs: lib.OutputTypes[], totalDeposit: number, signerKeyPair: lib.IKeyPair, networkId: any): lib.ITransactionPayload{
     // Prepare inputs to the tx
     const input = lib.TransactionHelper.inputFromOutputId(consumedOutputId);
 
@@ -238,18 +238,29 @@ export function mintCollectionNfts(txName: string, resolveCollectionNftId: boole
 
     // Record some info for ourselves
     let collectionNftOutputId = Converter.bytesToHex(lib.TransactionHelper.getTransactionPayloadHash(txPayload), true) + "0000";
-    let nftOutputId1 = Converter.bytesToHex(lib.TransactionHelper.getTransactionPayloadHash(txPayload), true) + "0100";
-    let nftOutputId2 = Converter.bytesToHex(lib.TransactionHelper.getTransactionPayloadHash(txPayload), true) + "0200";
-    let nftOutputId3 = Converter.bytesToHex(lib.TransactionHelper.getTransactionPayloadHash(txPayload), true) + "0300";
-    let nftOutputId4 = Converter.bytesToHex(lib.TransactionHelper.getTransactionPayloadHash(txPayload), true) + "0400";
-    let nftOutputId5 = Converter.bytesToHex(lib.TransactionHelper.getTransactionPayloadHash(txPayload), true) + "0500";
+
+    function pad(num: any, size: any) {
+        var s = "0000" + num;
+        return s.substr(s.length-size);
+    }
+
+    let outputIds = []
+    for (let i = 0; i < collectionSize; i++) {
+        let nftOutputId1 = Converter.bytesToHex(lib.TransactionHelper.getTransactionPayloadHash(txPayload), true) + pad(i + 1, 4);
+        outputIds.push(nftOutputId1)
+    }
+    // let nftOutputId2 = Converter.bytesToHex(lib.TransactionHelper.getTransactionPayloadHash(txPayload), true) + "0200";
+    // let nftOutputId3 = Converter.bytesToHex(lib.TransactionHelper.getTransactionPayloadHash(txPayload), true) + "0300";
+    // let nftOutputId4 = Converter.bytesToHex(lib.TransactionHelper.getTransactionPayloadHash(txPayload), true) + "0400";
+    // let nftOutputId5 = Converter.bytesToHex(lib.TransactionHelper.getTransactionPayloadHash(txPayload), true) + "0500";
 
     console.log("collectionNftOutputId", collectionNftOutputId)
-    console.log("nftOutputId1", nftOutputId1)
-    console.log("nftOutputId2", nftOutputId2)
-    console.log("nftOutputId3", nftOutputId3)
-    console.log("nftOutputId4", nftOutputId4)
-    console.log("nftOutputId5", nftOutputId5)
+    console.log("outputIds", outputIds)
+    // console.log("nftOutputId1", nftOutputId1)
+    // console.log("nftOutputId2", nftOutputId2)
+    // console.log("nftOutputId3", nftOutputId3)
+    // console.log("nftOutputId4", nftOutputId4)
+    // console.log("nftOutputId5", nftOutputId5)
     // // write collectionNFT
     // ctx.outputIdByName?.set(txName + "CollectionNft", collectionNftOutputId);
     // ctx.outputByName?.set(txName + "CollectionNft", collectionNft);
