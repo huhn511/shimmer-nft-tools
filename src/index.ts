@@ -91,10 +91,6 @@ async function run() {
   const outputResponse = await client.output(outputId);
   // We start from one Basic Output that we own, Our journey starts with the genesis.
   const genesisOutput = outputResponse.output;
-  console.log("outputId: ", outputId);
-  console.log("outputResponse: ", outputResponse);
-  console.log("genesisOutput: ", genesisOutput);
-
   const walletAddress = lib.Bech32Helper.addressFromBech32(
     newAddressBech32,
     nodeInfo.protocol.bech32Hrp
@@ -116,10 +112,8 @@ async function run() {
     walletAddress,
     networkId
   );
-  console.log("collectionNft", collectionNft);
   let txList = [];
   txList.push(collectionNft.txPayload);
-  console.log("txList", txList);
 
   /****************************************************************************************
    * Current output ownership:
@@ -157,9 +151,9 @@ async function run() {
   let tempOutputId = collectionNft.tx1CollectionNftOutputId;
   for (let index = 0; index < config.collectionSize; index++) {
 
-    let fixedAmount = nftCollectionOutputs.totalDeposit / config.collectionSize;
-    console.log("fixedAmount", fixedAmount)
-    console.log("fixedAmount2", Math.round(nftCollectionOutputs.totalDeposit / config.collectionSize))
+    // let fixedAmount = nftCollectionOutputs.totalDeposit//nftCollectionOutputs.totalDeposit / config.collectionSize;
+    // let firstTx = bigInt(tempOutput.amount).minus(nftCollectionOutputs.totalDeposit).toJSNumber()
+    console.log("tempOutput.amount", tempOutput.amount)
     const [ txPayload, prevCollectionNftOutputId, prevCollectionNft ] = mintCollectionNfts(
       config.collectionSize,
       index == 0 ? true : false,
@@ -167,7 +161,7 @@ async function run() {
       tempOutputId,
       [nftCollectionOutputs.outputs[index]], // Single NFT for testing
       // nftCollectionOutputs.outputs.slice(index, 5),
-      fixedAmount,
+      tempOutput.amount,
       walletKeyPair,
       networkId
       );
@@ -176,7 +170,6 @@ async function run() {
       tempOutputId = prevCollectionNftOutputId;
     }
 
-  console.log("txList", txList)
 
   /****************************************************************************************
    * Current output ownership:
@@ -271,9 +264,6 @@ async function chainTrasactionsViaBlocks(client: lib.SingleNodeClient, txs: Arra
 
         // Calculate blockId
         const blockId = lib.TransactionHelper.calculateBlockId(block);
-
-        console.log("chainTrasactionsViaBlocks:blockId: ", blockId)
-        console.log("chainTrasactionsViaBlocks:block: ", block)
 
         // Add it to list of blockIds
         blockIds.push(blockId);
