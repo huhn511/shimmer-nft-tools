@@ -15,13 +15,13 @@ import bigInt from "big-integer";
     const input = lib.TransactionHelper.inputFromOutputId(consumedOutputId);
     console.log("1, input: ", input)
     console.log("1, consumedOutput.amount: ", consumedOutput.amount)
-    console.log("1, value: ", parseInt(consumedOutput.amount) / 2)
-    console.log("1, value: new ", Math.ceil(parseInt(consumedOutput.amount) / 2))
+    console.log("1, value: ", parseInt(consumedOutput.amount) / 2, typeof (parseInt(consumedOutput.amount) / 2))
+    console.log("1, value: new ", Math.ceil(parseInt(consumedOutput.amount) / 2), typeof (Math.ceil(parseInt(consumedOutput.amount) / 2)))
     
     // Create the outputs, that is an NFT output
     let nftOutput: lib.INftOutput = {
         type: lib.NFT_OUTPUT_TYPE,
-        amount: (Math.ceil(parseInt(consumedOutput.amount) / 2)).toString(),  // We could put only requiredStorageDepoist into the nft output, but we will mint nft collection so we are going to transfer half of the basic output amount.
+        amount: consumedOutput.amount.toString(),  // We could put only requiredStorageDepoist into the nft output, but we will mint nft collection so we are going to transfer half of the basic output amount.
         // when minting, this has to be set to zero. It will be set in nodes as the hash of the outputId when the tx confirms.
         // Note, that from the first spend of the NFT you have to use the actual hash of outputId
         nftId: "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -47,22 +47,22 @@ import bigInt from "big-integer";
     }
     console.log("2, nftOutput: ", nftOutput)
     
-    // create basic output for the reminder amount
-    const remainderOutput: lib.IBasicOutput = {
-        type: lib.BASIC_OUTPUT_TYPE,
-        amount: (Math.ceil(parseInt(consumedOutput.amount) / 2)).toString(), // we return the other half as a reminder
-        nativeTokens: [],
-        unlockConditions: [
-            // Send it to the target address
-            {
-                type: lib.ADDRESS_UNLOCK_CONDITION_TYPE,
-                address: targetAddress,
-            }
-        ],
-        features: [],
-    }
+    // // create basic output for the reminder amount
+    // const remainderOutput: lib.IBasicOutput = {
+    //     type: lib.BASIC_OUTPUT_TYPE,
+    //     amount: (parseInt(consumedOutput.amount) / 2).toString(), // we return the other half as a reminder
+    //     nativeTokens: [],
+    //     unlockConditions: [
+    //         // Send it to the target address
+    //         {
+    //             type: lib.ADDRESS_UNLOCK_CONDITION_TYPE,
+    //             address: targetAddress,
+    //         }
+    //     ],
+    //     features: [],
+    // }
     
-    console.log("3, remainderOutput: ", remainderOutput)
+    // console.log("3, remainderOutput: ", remainderOutput)
     // Prepare Tx essence
     // InputsCommitment calculation
     const inputsCommitment = lib.TransactionHelper.getInputsCommitment([consumedOutput]);
@@ -73,7 +73,8 @@ import bigInt from "big-integer";
         type: lib.TRANSACTION_ESSENCE_TYPE,
         networkId: networkId,
         inputs: [input],
-        outputs: [nftOutput, remainderOutput],
+        // outputs: [nftOutput, remainderOutput],
+        outputs: [nftOutput],
         inputsCommitment: inputsCommitment,
     };
     console.log("5, txEssence: ", txEssence)
@@ -115,12 +116,12 @@ import bigInt from "big-integer";
         console.log("tx1CollectionNft", nftOutputId)
         console.log("tx1CollectionNft", nftOutput)
         console.log("tx1Basic", basicOutputId)
-        console.log("tx1Basic", remainderOutput)
+        // console.log("tx1Basic", remainderOutput)
 const obj = {
     tx1CollectionNftOutputId: nftOutputId,
-    tx1CollectionNftOutput: nftOutput,
+    tx1CollectionNftOutput: nftOutput, 
     tx1BasicOutputId: basicOutputId,
-    tx1BasicRemainderOutput: remainderOutput,
+    // tx1BasicRemainderOutput: remainderOutput,
     txPayload: txPayload,
 }
 
@@ -189,7 +190,8 @@ export function createNftCollectionOutputs(issuerAddress: lib.INftAddress, targe
 
 
 
-export function mintCollectionNfts(collectionSize: number, resolveCollectionNftId: boolean, consumedOutput: lib.OutputTypes, consumedOutputId: string, collectionOutputs: lib.OutputTypes[], totalDeposit: number, signerKeyPair: lib.IKeyPair, networkId: any): lib.ITransactionPayload{
+// export function mintCollectionNfts(collectionSize: number, resolveCollectionNftId: boolean, consumedOutput: lib.OutputTypes, consumedOutputId: string, collectionOutputs: lib.OutputTypes[], totalDeposit: number, signerKeyPair: lib.IKeyPair, networkId: any): lib.ITransactionPayload{
+export function mintCollectionNfts(collectionSize: number, resolveCollectionNftId: boolean, consumedOutput: lib.OutputTypes, consumedOutputId: string, collectionOutputs: lib.OutputTypes[], totalDeposit: number, signerKeyPair: lib.IKeyPair, networkId: any): [lib.ITransactionPayload, string, lib.INftOutput]{
     // Prepare inputs to the tx
     const input = lib.TransactionHelper.inputFromOutputId(consumedOutputId);
 
@@ -197,20 +199,20 @@ export function mintCollectionNfts(collectionSize: number, resolveCollectionNftI
     const inputsCommitment = lib.TransactionHelper.getInputsCommitment([consumedOutput]);
 
     // Transition the CollectionNft
-    let collectionNft = deepCopy(consumedOutput) as lib.INftOutput;
+    let prevCollectionNft = deepCopy(consumedOutput) as lib.INftOutput;
     // resolve nft Id if its all zeros
     if(resolveCollectionNftId){
-        collectionNft.nftId = lib.TransactionHelper.resolveIdFromOutputId(consumedOutputId);
+        prevCollectionNft.nftId = lib.TransactionHelper.resolveIdFromOutputId(consumedOutputId);
     }
      
-    collectionNft.amount = bigInt(consumedOutput.amount).minus(totalDeposit).toString(); 
-
+    prevCollectionNft.amount = bigInt(consumedOutput.amount).minus(totalDeposit).toString(); 
+    console.log("prevCollectionNft.amount", prevCollectionNft.amount)
     // 5.Create transaction essence
     const collectionTransactionEssence: lib.ITransactionEssence = {
         type: lib.TRANSACTION_ESSENCE_TYPE,
         networkId: networkId,
         inputs: [input],
-        outputs: [collectionNft, ...collectionOutputs],
+        outputs: [prevCollectionNft, ...collectionOutputs],
         inputsCommitment
     };
 
@@ -237,7 +239,7 @@ export function mintCollectionNfts(collectionSize: number, resolveCollectionNftI
     };
 
     // Record some info for ourselves
-    let collectionNftOutputId = Converter.bytesToHex(lib.TransactionHelper.getTransactionPayloadHash(txPayload), true) + "0000";
+    let prevCollectionNftOutputId = Converter.bytesToHex(lib.TransactionHelper.getTransactionPayloadHash(txPayload), true) + "0000";
 
     function pad(num: any, size: any) {
         var s = "0000" + num;
@@ -254,7 +256,7 @@ export function mintCollectionNfts(collectionSize: number, resolveCollectionNftI
     // let nftOutputId4 = Converter.bytesToHex(lib.TransactionHelper.getTransactionPayloadHash(txPayload), true) + "0400";
     // let nftOutputId5 = Converter.bytesToHex(lib.TransactionHelper.getTransactionPayloadHash(txPayload), true) + "0500";
 
-    console.log("collectionNftOutputId", collectionNftOutputId)
+    console.log("collectionNftOutputId", prevCollectionNftOutputId)
     console.log("outputIds", outputIds)
     // console.log("nftOutputId1", nftOutputId1)
     // console.log("nftOutputId2", nftOutputId2)
@@ -275,8 +277,9 @@ export function mintCollectionNfts(collectionSize: number, resolveCollectionNftI
     // ctx.outputByName?.set(txName + "Nft4", collectionOutputs[3]);
     // ctx.outputIdByName?.set(txName + "Nft5", nftOutputId5);
     // ctx.outputByName?.set(txName + "Nft5", collectionOutputs[4]);
-
-    return txPayload;
+    return [
+        txPayload, prevCollectionNftOutputId, prevCollectionNft
+    ]
 }
 
 

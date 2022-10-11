@@ -12,7 +12,6 @@ import config from "./config"
 import { mintCollectionNft, createNftCollectionOutputs, mintCollectionNfts } from "./create_nft";
 
 const EXPLORER = "https://explorer.shimmer.network/testnet";
-const API_ENDPOINT = "https://api.testnet.shimmer.network";
 const FAUCET = "https://faucet.testnet.shimmer.network/api/enqueue";
 
 import {
@@ -109,7 +108,6 @@ async function run() {
    ************************************/
 
   console.log("Minting collection nft...");
-  console.log("hä?");
   let collectionNft = mintCollectionNft(
     genesisOutput,
     outputId,
@@ -155,19 +153,27 @@ async function run() {
     );
   }
   console.log("Minting nft collection...");
+  let tempOutput = collectionNft.tx1CollectionNftOutput;
+  let tempOutputId = collectionNft.tx1CollectionNftOutputId;
   for (let index = 0; index < config.collectionSize; index++) {
-    
-    let txPayload2 = mintCollectionNfts(
+
+    let fixedAmount = nftCollectionOutputs.totalDeposit / config.collectionSize;
+    console.log("fixedAmount", fixedAmount)
+    console.log("fixedAmount2", Math.round(nftCollectionOutputs.totalDeposit / config.collectionSize))
+    const [ txPayload, prevCollectionNftOutputId, prevCollectionNft ] = mintCollectionNfts(
       config.collectionSize,
-      true,
-      collectionNft.tx1CollectionNftOutput,
-      collectionNft.tx1CollectionNftOutputId,
-      [nftCollectionOutputs.outputs[index]],
-      nftCollectionOutputs.totalDeposit / config.collectionSize,
+      index == 0 ? true : false,
+      tempOutput,//collectionNft.tx1CollectionNftOutput,
+      tempOutputId,
+      [nftCollectionOutputs.outputs[index]], // Single NFT for testing
+      // nftCollectionOutputs.outputs.slice(index, 5),
+      fixedAmount,
       walletKeyPair,
       networkId
       );
-      txList.push(txPayload2);
+      txList.push(txPayload);
+      tempOutput = prevCollectionNft;
+      tempOutputId = prevCollectionNftOutputId;
     }
 
   console.log("txList", txList)
